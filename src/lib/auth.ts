@@ -1,52 +1,17 @@
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "./db";
+import { encrypt, decrypt } from "./token";
 
-const secretKey = process.env.JWT_SECRET || "your-secret-key-change-in-production";
-const key = new TextEncoder().encode(secretKey);
+// Re-export for backward compatibility if needed, or use directly
+export { encrypt, decrypt };
 
 // Session configuration
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 60 minutes (1 hour)
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
-
-// ============================================
-// PASSWORD HASHING
-// ============================================
-
-export async function hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, 12);
-}
-
-export async function comparePassword(password: string, hashed: string): Promise<boolean> {
-    return await bcrypt.compare(password, hashed);
-}
-
-// ============================================
-// JWT TOKEN MANAGEMENT
-// ============================================
-
-export async function encrypt(payload: any) {
-    return await new SignJWT(payload)
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime("24h")
-        .sign(key);
-}
-
-export async function decrypt(input: string): Promise<any> {
-    try {
-        const { payload } = await jwtVerify(input, key, {
-            algorithms: ["HS256"],
-        });
-        return payload;
-    } catch (error) {
-        return null;
-    }
-}
 
 // ============================================
 // SESSION MANAGEMENT

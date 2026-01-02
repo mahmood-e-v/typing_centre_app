@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { Decimal } from "@prisma/client/runtime/library";
-import { AccountCategory, JournalEntryType, AccountType } from "@/generated/client_v2";
+import { AccountCategory, JournalEntryType, AccountType } from "@prisma/client";
 
 /**
  * Standard Chart of Accounts Template for UAE Typing Centers

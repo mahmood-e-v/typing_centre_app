@@ -9,7 +9,7 @@ import {
     getPartnerBalance,
     initializeCompanyCOA
 } from "@/lib/accounting-service";
-import { JournalEntryType } from '@/generated/client_v2';
+import { JournalEntryType } from '@prisma/client';
 import { Decimal } from "@prisma/client/runtime/library";
 import { getDataFilter, enforceBranchIsolation } from '@/lib/authorization';
 

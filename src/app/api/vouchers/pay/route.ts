@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from "@/lib/auth";
 import { enforcePeriodLock, LockType, enforceDailyLock } from "@/lib/financial-periods";
 import { createJournalEntry, getAccountByCode } from "@/lib/accounting-service";
-import { JournalEntryType } from '@/generated/client_v2';
+import { JournalEntryType } from '@prisma/client';
 import { Decimal } from "@prisma/client/runtime/library";
 
 export async function POST(request: Request) {

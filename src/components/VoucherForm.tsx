@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, X, Search, Calendar, CreditCard, Wallet, Receipt, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { PartnerType, PaymentMethod, VoucherStatus } from '@/generated/client_v2';
+import { PartnerType, PaymentMethod, VoucherStatus } from '@prisma/client';
 
 interface VoucherItem {
     id: string;

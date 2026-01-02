@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { FinancialPeriod, Prisma } from "@/generated/client_v2";
+import { FinancialPeriod, Prisma } from "@prisma/client";
 
 export enum LockType {
     ACCOUNTING = "ACCOUNTING",

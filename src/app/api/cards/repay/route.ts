@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { createJournalEntry } from '@/lib/accounting-service';
-import { JournalEntryType } from '@/generated/client_v2'; // Ensure this enum is imported
+import { JournalEntryType } from '@prisma/client';
 
 export async function POST(req: Request) {
     try {

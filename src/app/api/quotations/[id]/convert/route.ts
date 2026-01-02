@@ -7,7 +7,7 @@ import {
     getAccountByCode,
     getPartnerBalance
 } from "@/lib/accounting-service";
-import { JournalEntryType } from '@/generated/client_v2';
+import { JournalEntryType } from '@prisma/client';
 import { Decimal } from "@prisma/client/runtime/library";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

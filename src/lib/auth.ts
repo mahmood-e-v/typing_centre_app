@@ -14,6 +14,18 @@ const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 
 // ============================================
+// PASSWORD HASHING
+// ============================================
+
+export async function hashPassword(password: string): Promise<string> {
+    return await bcrypt.hash(password, 12);
+}
+
+export async function comparePassword(password: string, hashed: string): Promise<boolean> {
+    return await bcrypt.compare(password, hashed);
+}
+
+// ============================================
 // SESSION MANAGEMENT
 // ============================================
 

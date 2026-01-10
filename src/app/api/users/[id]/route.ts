@@ -17,7 +17,7 @@ export async function PATCH(
 
         const { id } = await params;
         const body = await request.json();
-        const { username, password, roleIds, branchId, firstName, lastName } = body;
+        const { username, password, roleIds, branchId, firstName, lastName, email } = body;
 
         // 1. Fetch existing user to check permissions
         const existingUser = await prisma.user.findUnique({
@@ -52,6 +52,7 @@ export async function PATCH(
         };
 
         if (username) updateData.username = username;
+        if (email) updateData.email = email;
         if (branchId) updateData.branchId = branchId;
 
         // Password update

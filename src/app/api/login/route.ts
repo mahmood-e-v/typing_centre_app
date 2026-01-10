@@ -112,11 +112,19 @@ export async function POST(req: NextRequest) {
 
         // Set session cookie
         const cookieStore = await cookies();
+
+        // Determine if we should use secure cookies
+        // If we are on localhost, we might not have HTTPS even in production mode (e.g. testing build locally)
+        const isProduction = process.env.NODE_ENV === "production";
+        const host = req.headers.get("host") || "";
+        const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+        const useSecureCookie = isProduction && !isLocalhost;
+
         cookieStore.set({
             name: "session",
             value: sessionToken,
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: useSecureCookie,
             sameSite: "lax",
             maxAge: 24 * 60 * 60, // 24 hours
         });

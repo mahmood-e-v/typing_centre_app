@@ -5,7 +5,8 @@ import { validatePasswordStrength } from '@/lib/password-reset';
 
 export async function POST(request: NextRequest) {
     try {
-        const { token, password } = await request.json();
+        const { token: rawToken, password } = await request.json();
+        const token = rawToken?.replace(/\\n/g, '').trim();
 
         if (!token || !password) {
             return NextResponse.json(

@@ -22,7 +22,7 @@ function ResetPasswordContent() {
 
     const router = useRouter();
     const searchParams = useSearchParams();
-    const token = searchParams.get("token");
+    const token = searchParams.get("token")?.replace(/\\n/g, '').trim();
 
     useEffect(() => {
         if (!token) {

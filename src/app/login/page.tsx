@@ -27,12 +27,22 @@ export default function LoginPage() {
             if (res.ok) {
                 // Check if user needs to change password
                 const sessionRes = await fetch("/api/session");
-                const sessionData = await sessionRes.json();
+                
+                if (sessionRes.ok) {
+                    const sessionData = await sessionRes.json();
 
-                if (sessionData.user?.forcePasswordChange) {
-                    router.push("/change-password");
+                    if (sessionData.user?.forcePasswordChange) {
+                        router.push("/change-password");
+                    } else if (sessionData.user) {
+                        router.push("/dashboard");
+                    } else {
+                        // This case handles { user: null } or similar unexpectedly valid but empty responses
+                        console.error("Login successful but no user in session");
+                        setError("Session verification failed. Please try again.");
+                    }
                 } else {
-                    router.push("/dashboard");
+                    console.error("Session API returned error:", sessionRes.status);
+                    setError("Login successful but session creation failed. Please check your browser cookie settings.");
                 }
             } else {
                 const data = await res.json();

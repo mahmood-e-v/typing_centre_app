@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
                     </p>
                 </div>
             `,
-            text: `Reset Your Password\n\nPlease visit the following URL to reset your password: ${resetUrl}\n\nThis link is valid for 15 minutes.`
+            text: `Reset Your Password\n\nPlease visit the following URL to reset your password:\n${resetUrl}\n\nThis link is valid for 15 minutes.`
         });
 
         return NextResponse.json({

@@ -161,11 +161,18 @@ export async function updateSession(request: NextRequest) {
 
         // Refresh cookie
         const res = NextResponse.next();
+
+        // Determine if we should use secure cookies (same logic as login)
+        const isProduction = process.env.NODE_ENV === "production";
+        const host = request.headers.get("host") || "";
+        const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+        const useSecureCookie = isProduction && !isLocalhost;
+
         res.cookies.set({
             name: "session",
             value: sessionToken,
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: useSecureCookie,
             sameSite: "lax",
             expires: session.expiresAt,
         });

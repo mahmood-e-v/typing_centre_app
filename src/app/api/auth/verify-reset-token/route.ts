@@ -4,14 +4,19 @@ import { prisma } from '@/lib/db';
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const token = searchParams.get('token');
+        // Remove literal \n characters and whitespace
+        const token = searchParams.get('token')?.replace(/\\n/g, '').trim();
 
         if (!token) {
+            console.log("Verify Reset Token: No token provided");
             return NextResponse.json(
                 { error: 'Token is required' },
                 { status: 400 }
             );
         }
+
+        console.log(`Verify Reset Token Debug: Received token "${token}" (Length: ${token.length})`);
+        console.log(`First char code: ${token.charCodeAt(0)}, Last char code: ${token.charCodeAt(token.length - 1)}`);
 
         // Find token in database
         const resetToken = await prisma.passwordResetToken.findUnique({

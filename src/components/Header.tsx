@@ -50,8 +50,16 @@ export default function Header() {
 
     const logout = async () => {
         clearTimers();
-        const res = await fetch("/api/logout", { method: "POST" });
-        if (res.ok) router.push("/login");
+        try {
+            const res = await fetch("/api/logout", { method: "POST" });
+            if (res.ok) {
+                router.push("/login");
+            }
+        } catch (error) {
+            console.error("Logout failed:", error);
+            // Fallback: redirects to login even if server logout fails
+            router.push("/login");
+        }
     };
 
     const clearTimers = () => {

@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
     try {
         const { email, password } = await req.json();
 
+        console.log(`[Login] Attempt for email: ${email}`);
+
         if (!email || !password) {
             return NextResponse.json(
                 { error: "Email and password are required" },
@@ -119,6 +121,8 @@ export async function POST(req: NextRequest) {
         const host = req.headers.get("host") || "";
         const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
         const useSecureCookie = isProduction && !isLocalhost;
+
+        console.log(`[Login] Setting cookie - Secure: ${useSecureCookie}, SameSite: lax, Production: ${isProduction}, Host: ${host}`);
 
         cookieStore.set({
             name: "session",

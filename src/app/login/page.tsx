@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, User, Lock, Loader2 } from "lucide-react";
+import { LogIn, User, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
     const [error, setError] = useState("");
     const router = useRouter();
 
@@ -16,6 +18,7 @@ export default function LoginPage() {
         e.preventDefault();
         setIsLoading(true);
         setError("");
+        setSuccessMessage("");
 
         try {
             const res = await fetch("/api/login", {
@@ -25,15 +28,19 @@ export default function LoginPage() {
             });
 
             if (res.ok) {
+                console.log("Login API success");
+
                 // Check if user needs to change password
                 const sessionRes = await fetch("/api/session");
-                
+
                 if (sessionRes.ok) {
                     const sessionData = await sessionRes.json();
 
                     if (sessionData.user?.forcePasswordChange) {
+                        setSuccessMessage("Login successful! Redirecting to password change...");
                         router.push("/change-password");
                     } else if (sessionData.user) {
+                        setSuccessMessage("Login successful! Redirecting to dashboard...");
                         router.push("/dashboard");
                     } else {
                         // This case handles { user: null } or similar unexpectedly valid but empty responses
@@ -99,15 +106,26 @@ export default function LoginPage() {
                             <div className="relative">
                                 <Lock className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all placeholder:text-zinc-600"
+                                    autoComplete="current-password"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all placeholder:text-zinc-600"
                                     placeholder="••••••••"
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5" />
+                                    ) : (
+                                        <Eye className="w-5 h-5" />
+                                    )}
+                                </button>
                             </div>
                             <div className="flex justify-end">
                                 <a
@@ -122,6 +140,12 @@ export default function LoginPage() {
                         {error && (
                             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
                                 {error}
+                            </div>
+                        )}
+
+                        {successMessage && (
+                            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm text-center">
+                                {successMessage}
                             </div>
                         )}
 

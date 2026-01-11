@@ -41,7 +41,9 @@ export default function LoginPage() {
                         router.push("/change-password");
                     } else if (sessionData.user) {
                         setSuccessMessage("Login successful! Redirecting to dashboard...");
-                        router.push("/dashboard");
+                        // Use window.location.href to force a hard reload.
+                        // This ensures cookies are properly sent and middleware re-validates the session.
+                        window.location.href = "/dashboard";
                     } else {
                         // This case handles { user: null } or similar unexpectedly valid but empty responses
                         console.error("Login successful but no user in session");

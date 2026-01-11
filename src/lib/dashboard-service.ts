@@ -8,11 +8,10 @@ export interface DashboardData {
         totalBank: Decimal;
         accountsReceivable: Decimal;
         accountsPayable: Decimal;
-        creditCardPayable: Decimal; // Added
+        creditCardPayable: Decimal;
         netRevenueToday: Decimal;
         dailyProfit: Decimal;
     };
-    // ... (rest of interface unchanged, handled by matching context)
     trends: {
         date: string;
         revenue: number;
@@ -28,6 +27,7 @@ export interface DashboardData {
         net: Decimal;
     };
     recentInvoices: any[];
+    expiringDocumentsCount: number;
 }
 
 export async function getDashboardData(companyId: string, branchId?: string): Promise<DashboardData> {
@@ -216,9 +216,21 @@ export async function getDashboardData(companyId: string, branchId?: string): Pr
         take: 5
     });
 
+    // Expiry Task
+    const expiringTask = prisma.customerDocument.count({
+        where: {
+            companyId,
+            status: 'ACTIVE',
+            expiryDate: {
+                lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next 30 days
+                gte: today // Not expired yet (or recently expired if we want to include them?) - keeping it forward looking for now, but user might want expired too. Let's stick to "Near Expiry"
+            }
+        }
+    });
+
     // Execute all top-level sections in parallel
-    const [kpis, trends, services, vats, recentInvoices] = await Promise.all([
-        kpiTask, trendsTask, servicesTask, vatTask, recentTask
+    const [kpis, trends, services, vats, recentInvoices, expiringDocumentsCount] = await Promise.all([
+        kpiTask, trendsTask, servicesTask, vatTask, recentTask, expiringTask
     ]);
 
     return {
@@ -226,6 +238,8 @@ export async function getDashboardData(companyId: string, branchId?: string): Pr
         trends,
         services,
         vats,
-        recentInvoices
+        recentInvoices,
+        expiringDocumentsCount
     };
 }
+

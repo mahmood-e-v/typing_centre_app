@@ -62,6 +62,8 @@ model Company {
   workTypes           WorkType[]
   businessCards       BusinessCard[]
   quotations          Quotation[]
+  documentTypes       DocumentType[]
+  customerDocuments   CustomerDocument[]
 }
 
 model DailyClosing {
@@ -429,6 +431,13 @@ model WorkType {
   transactions       Transaction[]
   quotationItems     QuotationItem[]
   company            Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Document Expiry Tracking
+  tracksExpiry          Boolean       @default(false)
+  defaultDocumentTypeId String?
+  defaultReminderDays   Int           @default(30)
+  defaultDocumentType   DocumentType? @relation(fields: [defaultDocumentTypeId], references: [id])
+
 
   @@unique([companyId, description])
   @@index([companyId])
@@ -445,6 +454,7 @@ model Beneficiary {
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   partner      Partner?      @relation(fields: [partnerId], references: [id])
   transactions Transaction[]
+  customerDocuments CustomerDocument[]
 
   @@index([companyId])
 }
@@ -461,6 +471,7 @@ model Partner {
   company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   transactions       Transaction[]
   quotations         Quotation[]
+  customerDocuments  CustomerDocument[]
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -925,3 +936,103 @@ model QuotationItem {
   
   @@index([quotationId])
 }
+
+// -------------------------------------
+// DOCUMENT MANAGEMENT SYSTEM (PRO SERVICES)
+// -------------------------------------
+
+model DocumentType {
+  id              String             @id @default(cuid())
+  companyId       String
+  name            String             // e.g. "Passport", "Emirates ID", "Trade License", "Labour Card"
+  description     String?
+  issueAuthority  String?            // e.g. "ICP", "DED"
+  isMandatory     Boolean            @default(false)
+  requiresNumber  Boolean            @default(true)
+  requiresExpiry  Boolean            @default(true)
+  patternRegex    String?            // Optional regex for validation
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  workTypes       WorkType[]         // Default documents linked to services
+  documents       CustomerDocument[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model CustomerDocument {
+  id              String             @id @default(cuid())
+  companyId       String
+  partnerId       String?            // Linking to a Partner (Company/Customer)
+  beneficiaryId   String?            // Linking to a specific Beneficiary (Individual)
+  documentTypeId  String
+  documentNumber  String?
+  issueDate       DateTime?
+  expiryDate      DateTime?
+  issuedAt        String?            // Place of Issue (Dubai, Abu Dhabi)
+  status          DocumentStatus     @default(ACTIVE)
+  
+  // File Storage
+  fileUrl         String?
+  fileKey         String?
+  mimeType        String?
+  
+  // Tracking
+  lastVerifiedAt  DateTime?
+  notes           String?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  category        String?            // "PERSONAL", "COMPANY", "VEHICLE"
+
+  // Relations
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  partner         Partner?           @relation(fields: [partnerId], references: [id])
+  beneficiary     Beneficiary?       @relation(fields: [beneficiaryId], references: [id])
+  documentType    DocumentType       @relation(fields: [documentTypeId], references: [id])
+  notifications   DocumentNotificationSchedule[]
+
+  @@index([companyId])
+  @@index([partnerId])
+  @@index([beneficiaryId])
+  @@index([expiryDate])
+}
+
+model DocumentNotificationSchedule {
+  id              String             @id @default(cuid())
+  documentId      String
+  scheduledDate   DateTime           // When to send the notification
+  status          NotificationStatus @default(PENDING)
+  sentAt          DateTime?
+  message         String?            // Snapshot of message
+  channel         String             @default("WHATSAPP") // SMS, EMAIL, WHATSAPP
+  recipient       String?            // Phone or Email
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  document        CustomerDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  RENEWAL_IN_PROGRESS
+  ARCHIVED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+  CANCELLED
+}
+

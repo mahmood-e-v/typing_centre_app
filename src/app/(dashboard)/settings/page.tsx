@@ -2,13 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, CreditCard, Building2, Store, Pencil } from 'lucide-react';
+import { Plus, Trash2, CreditCard, Building2, Store, Pencil, CalendarClock } from 'lucide-react';
+
+interface DocumentType {
+    id: string;
+    name: string;
+}
 
 interface WorkType {
     id: string;
     description: string;
     presetGovFee: number;
     presetTypingCharge: number;
+    tracksExpiry?: boolean;
+    defaultDocumentTypeId?: string;
+    defaultReminderDays?: number;
+    defaultDocumentType?: DocumentType;
 }
 
 export default function SettingsPage() {
@@ -16,6 +25,7 @@ export default function SettingsPage() {
     const [categories, setCategories] = useState<any[]>([]);
     const [cards, setCards] = useState<any[]>([]);
     const [accounts, setAccounts] = useState<any[]>([]);
+    const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [newAccount, setNewAccount] = useState<{
@@ -71,10 +81,20 @@ export default function SettingsPage() {
     });
 
     // New Service Form State
-    const [newService, setNewService] = useState({
+    const [newService, setNewService] = useState<{
+        description: string;
+        presetGovFee: number;
+        presetTypingCharge: number;
+        tracksExpiry: boolean;
+        defaultDocumentTypeId: string;
+        defaultReminderDays: number;
+    }>({
         description: '',
         presetGovFee: 0,
-        presetTypingCharge: 0
+        presetTypingCharge: 0,
+        tracksExpiry: false,
+        defaultDocumentTypeId: '',
+        defaultReminderDays: 30
     });
 
     // New Category Form State
@@ -85,6 +105,7 @@ export default function SettingsPage() {
         fetchCategories();
         fetchCards();
         fetchAccounts();
+        fetchDocumentTypes();
     }, []);
 
     const fetchCards = async () => {
@@ -109,6 +130,14 @@ export default function SettingsPage() {
         }
     };
 
+    const fetchDocumentTypes = async () => {
+        try {
+            const res = await fetch('/api/document-types');
+            const data = await res.json();
+            if (Array.isArray(data)) setDocumentTypes(data);
+        } catch (e) { console.error(e); }
+    };
+
     const fetchCategories = async () => {
         try {
             const res = await fetch('/api/expense-categories');
@@ -131,7 +160,14 @@ export default function SettingsPage() {
             });
             if (res.ok) {
                 await fetchServices();
-                setNewService({ description: '', presetGovFee: 0, presetTypingCharge: 0 });
+                setNewService({
+                    description: '',
+                    presetGovFee: 0,
+                    presetTypingCharge: 0,
+                    tracksExpiry: false,
+                    defaultDocumentTypeId: '',
+                    defaultReminderDays: 30
+                });
                 alert("Service added successfully!");
             } else {
                 alert("Failed to add service. Please check your inputs.");
@@ -288,7 +324,7 @@ export default function SettingsPage() {
 
                 <Link href="/financial-periods" className="bg-white p-6 rounded-xl border shadow-sm hover:shadow-md transition flex items-start gap-4 group">
                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition">
-                        <Building2 className="w-6 h-6" />
+                        <CalendarClock className="w-6 h-6" />
                     </div>
                     <div>
                         <h3 className="font-bold text-lg text-slate-900">Financial Periods</h3>
@@ -573,12 +609,55 @@ export default function SettingsPage() {
                                     onChange={(e) => setNewService({ ...newService, presetTypingCharge: parseFloat(e.target.value) || 0 })}
                                 />
                             </div>
-                            <button
-                                onClick={handleAddService}
-                                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
+                        </div>
+
+                        {/* Document Expiry Config */}
+                        <div className="md:col-span-4 border-t pt-2 mt-2">
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded border border-slate-200 hover:bg-slate-50">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 rounded"
+                                        checked={newService.tracksExpiry}
+                                        onChange={e => setNewService({ ...newService, tracksExpiry: e.target.checked })}
+                                    />
+                                    <span className="text-sm font-medium text-slate-700">Monitor Expiry</span>
+                                </label>
+
+                                {newService.tracksExpiry && (
+                                    <>
+                                        <div className="flex-1">
+                                            <select
+                                                className="w-full p-2 border rounded-md text-sm"
+                                                value={newService.defaultDocumentTypeId}
+                                                onChange={e => setNewService({ ...newService, defaultDocumentTypeId: e.target.value })}
+                                            >
+                                                <option value="">-- Select Doc Type --</option>
+                                                {documentTypes.map(d => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="w-32 flex items-center gap-2" title="Days before expiry to check">
+                                            <input
+                                                type="number"
+                                                className="w-16 p-2 border rounded-md text-sm text-center"
+                                                value={newService.defaultReminderDays}
+                                                onChange={e => setNewService({ ...newService, defaultReminderDays: parseInt(e.target.value) || 30 })}
+                                            />
+                                            <span className="text-xs text-slate-500">days notice</span>
+                                        </div>
+                                    </>
+                                )}
+
+                                <button
+                                    onClick={handleAddService}
+                                    className="ml-auto p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center gap-2 px-4"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    <span>Add Service</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -590,7 +669,8 @@ export default function SettingsPage() {
                                     <th className="px-6 py-3">Service Name</th>
                                     <th className="px-6 py-3">Govt Fee</th>
                                     <th className="px-6 py-3">Typing Charge</th>
-                                    <th className="px-6 py-3">Total (Excl. VAT)</th>
+                                    <th className="px-6 py-3">Total</th>
+                                    <th className="px-6 py-3">Expiry Tracking</th>
                                     <th className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
@@ -602,6 +682,18 @@ export default function SettingsPage() {
                                         <td className="px-6 py-4">{Number(service.presetTypingCharge || 0).toFixed(2)}</td>
                                         <td className="px-6 py-4 font-bold">{(Number(service.presetGovFee || 0) + Number(service.presetTypingCharge || 0)).toFixed(2)}</td>
                                         <td className="px-6 py-4">
+                                            {service.tracksExpiry ? (
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded w-fit font-bold">Enabled</span>
+                                                    {service.defaultDocumentType && (
+                                                        <span className="text-[10px] text-slate-500 mt-1">{service.defaultDocumentType.name}</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-slate-300">Disabled</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <button className="text-red-500 hover:text-red-700">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -610,7 +702,7 @@ export default function SettingsPage() {
                                 ))}
                                 {services.length === 0 && !isLoading && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                                        <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
                                             No services added yet.
                                         </td>
                                     </tr>

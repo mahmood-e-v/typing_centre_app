@@ -103,11 +103,15 @@ export async function getSession() {
             return null;
         }
 
-        // Update last activity
-        await prisma.session.update({
-            where: { id: session.id },
-            data: { lastActivity: new Date() },
-        });
+        // Update last activity (THROTTLED)
+        // Only update if more than 5 minutes have passed to prevent DB locking on parallel requests
+        const ACTIVITY_UPDATE_THRESHOLD = 5 * 60 * 1000;
+        if (inactiveTime > ACTIVITY_UPDATE_THRESHOLD) {
+            await prisma.session.update({
+                where: { id: session.id },
+                data: { lastActivity: new Date() },
+            });
+        }
 
         // Build permissions array
         const permissions = session.user.userRoles.flatMap((ur) =>

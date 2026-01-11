@@ -12,7 +12,8 @@ import {
     Building2,
     Calendar,
     ChevronRight,
-    Search
+    Search,
+    FileText
 } from 'lucide-react';
 import { RevenueTrendChart } from './RevenueTrendChart';
 import { ServiceDistributionChart } from './ServiceDistributionChart';
@@ -65,6 +66,7 @@ export function DashboardClient() {
         { label: "Card Payables", value: data.kpis.creditCardPayable, icon: Wallet, color: "bg-amber-500", detail: "Credit Cards" },
         { label: "Revenue Today", value: data.kpis.netRevenueToday, icon: TrendingUp, color: "bg-emerald-500", detail: "Typing Income" },
         { label: "Daily Profit", value: data.kpis.dailyProfit, icon: ArrowUpRight, color: "bg-violet-500", detail: "Net Gains" },
+        { label: "Expiring Docs", value: data.expiringDocumentsCount || 0, icon: FileText, color: "bg-red-500", detail: "Next 30 Days" },
     ];
 
     return (

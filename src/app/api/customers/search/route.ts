@@ -74,6 +74,7 @@ export async function GET(req: Request) {
         };
 
         if (type === 'INDIVIDUAL') {
+            // 1. Search Partners of type INDIVIDUAL
             const partners = await prisma.partner.findMany({
                 where: {
                     companyId: session.user.companyId,
@@ -84,19 +85,50 @@ export async function GET(req: Request) {
                 orderBy: { name: 'asc' }
             });
 
+            // 2. Search Orphan Beneficiaries (Individuals saved in Beneficiary list)
+            const beneficiaries = await prisma.beneficiary.findMany({
+                where: {
+                    companyId: session.user.companyId,
+                    partnerId: null, // Orphan
+                    name: { contains: q, mode: 'insensitive' }
+                },
+                take: 10,
+                orderBy: { name: 'asc' }
+            });
+
+            // Get Balances for Partners
             const balances = await getBalances(partners.map(p => p.id));
 
-            const results = partners.map(p => ({
-                id: p.id,
-                name: p.name,
-                phone: p.phone,
-                email: p.email,
-                type: 'INDIVIDUAL',
-                dues: balances[p.id]?.dues || 0,
-                liabilities: balances[p.id]?.liabilities || 0,
-                company: null
-            }));
-            return NextResponse.json(results);
+            // Combine Results
+            const results = [
+                ...partners.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    phone: p.phone,
+                    email: p.email,
+                    type: 'INDIVIDUAL', // From Partner
+                    dues: balances[p.id]?.dues || 0,
+                    liabilities: balances[p.id]?.liabilities || 0,
+                    company: null,
+                    source: 'PARTNER'
+                })),
+                ...beneficiaries.map(b => ({
+                    id: b.id,
+                    name: b.name,
+                    phone: b.phone,
+                    email: b.email,
+                    type: 'INDIVIDUAL', // Treat as Individual
+                    dues: 0, // Beneficiaries don't have direct ledger accounts usually
+                    liabilities: 0,
+                    company: null,
+                    source: 'BENEFICIARY'
+                }))
+            ];
+
+            // Sort combined results
+            results.sort((a, b) => a.name.localeCompare(b.name));
+
+            return NextResponse.json(results.slice(0, 15));
 
         } else {
             const beneficiaries = await prisma.beneficiary.findMany({

@@ -18,6 +18,21 @@ export default function Header() {
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
     const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [notificationsCount, setNotificationsCount] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+
+        // Fetch notification count
+        fetch('/api/notifications/documents?days=30', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                if (typeof data.count === 'number') {
+                    setNotificationsCount(data.count);
+                }
+            })
+            .catch(err => console.error("Failed to fetch notifications", err));
+    }, [user]);
 
     useEffect(() => {
         fetch("/api/session")
@@ -139,11 +154,22 @@ export default function Header() {
                         type="text"
                         placeholder="Search transactions..."
                         className="bg-transparent border-none outline-none text-sm w-full"
+                        suppressHydrationWarning
                     />
                 </div>
                 <div className="flex items-center gap-x-4">
-                    <button className="p-2 hover:bg-slate-100 rounded-full transition">
-                        <Bell className="h-5 w-5 text-slate-600" />
+                    <button
+                        onClick={() => router.push('/notifications')}
+                        className="p-2 hover:bg-slate-100 rounded-full transition relative group"
+                        suppressHydrationWarning
+                    >
+                        <Bell className="h-5 w-5 text-slate-600 group-hover:text-slate-800" />
+                        {notificationsCount > 0 && (
+                            <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                            </span>
+                        )}
                     </button>
 
                     {isLoading ? (

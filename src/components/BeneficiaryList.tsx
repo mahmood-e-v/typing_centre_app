@@ -225,7 +225,7 @@ export default function BeneficiaryList() {
                                                 <span className="text-[10px] text-slate-400 uppercase font-bold">{b.partner.type}</span>
                                             </div>
                                         ) : (
-                                            <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-bold">WALK-IN</span>
+                                            <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded font-bold">INDIVIDUAL</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 space-y-1">
@@ -364,7 +364,7 @@ export default function BeneficiaryList() {
                                             value={selectedPartnerId}
                                             onChange={e => setSelectedPartnerId(e.target.value)}
                                         >
-                                            <option value="">No Company (Personal / Walk-in)</option>
+                                            <option value="">Individual (No Company Link)</option>
                                             {partners.map(p => (
                                                 <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
                                             ))}

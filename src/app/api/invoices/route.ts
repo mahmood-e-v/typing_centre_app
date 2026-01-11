@@ -126,8 +126,49 @@ export async function POST(req: Request) {
 
             } else if (customerType === 'INDIVIDUAL') {
                 if (header.customerId) {
-                    // Existing Individual selected
-                    finalPartnerId = header.customerId;
+                    // Check if it's a Partner first
+                    let existingPartner = await tx.partner.findUnique({ where: { id: header.customerId } });
+
+                    if (existingPartner) {
+                        // Update Contact Info if provided (User request: "Saved against his name")
+                        if (header.customerPhone || header.customerEmail) {
+                            await tx.partner.update({
+                                where: { id: existingPartner.id },
+                                data: {
+                                    phone: header.customerPhone || existingPartner.phone,
+                                    email: header.customerEmail || existingPartner.email
+                                }
+                            });
+                        }
+                        finalPartnerId = existingPartner.id;
+                    } else {
+                        // Check if it's a Beneficiary (Orphan) that needs promotion
+                        const beneficiary = await tx.beneficiary.findUnique({ where: { id: header.customerId } });
+                        if (beneficiary) {
+                            // CONVERT TO PARTNER to allow Ledger Tracking
+                            const newPartner = await tx.partner.create({
+                                data: {
+                                    companyId: session.user.companyId,
+                                    name: beneficiary.name,
+                                    type: 'INDIVIDUAL',
+                                    phone: header.customerPhone || beneficiary.phone,
+                                    email: header.customerEmail || beneficiary.email
+                                }
+                            });
+
+                            // Link Beneficiary to this new Partner (so it shows as correct Type in Master List)
+                            await tx.beneficiary.update({
+                                where: { id: beneficiary.id },
+                                data: { partnerId: newPartner.id }
+                            });
+
+                            finalPartnerId = newPartner.id;
+                        } else {
+                            // Fallback: If ID provided but not found, assume it's valid for now or let validation fail
+                            // Ideally we should fail here to avoid data corruption, but for robustness:
+                            finalPartnerId = header.customerId;
+                        }
+                    }
                 } else {
                     // Auto-create new Individual Partner
                     const newPartner = await tx.partner.create({
@@ -262,6 +303,88 @@ export async function POST(req: Request) {
 
             for (const item of items) {
                 const workType = allWorkTypes.find(wt => wt.description === item.service);
+                console.log(`[DEBUG] Processing Item: ${item.service} | TracksExpiry: ${workType?.tracksExpiry} | DocData:`, item.documentData);
+
+                // Document Expiry Logic
+                if (workType?.tracksExpiry && item.documentData) {
+                    const { expiryDate, documentTypeId, documentNumber, reminderDays } = item.documentData;
+                    console.log(`[DEBUG] Inside Logic - Expiry: ${expiryDate}, Type: ${documentTypeId}`);
+
+                    if (expiryDate && documentTypeId) {
+                        // Check if document exists for this customer + type
+                        // We link to Beneficiary (if individual) or Partner
+                        // If beneficiary is present, link to Beneficiary.
+                        const docOwnerId = finalBeneficiaryId ? { beneficiaryId: finalBeneficiaryId } : (finalPartnerId ? { partnerId: finalPartnerId } : null);
+                        console.log(`[DEBUG] Doc Owner:`, docOwnerId);
+
+                        // We must have an owner to track document
+                        if (docOwnerId) {
+                            const expDateObj = new Date(expiryDate);
+
+                            // Find existing
+                            let existingDoc = await tx.customerDocument.findFirst({
+                                where: {
+                                    companyId: session.user.companyId,
+                                    documentTypeId,
+                                    ...docOwnerId
+                                }
+                            });
+
+                            if (existingDoc) {
+                                // Update existing
+                                existingDoc = await tx.customerDocument.update({
+                                    where: { id: existingDoc.id },
+                                    data: {
+                                        expiryDate: expDateObj,
+                                        documentNumber: documentNumber || existingDoc.documentNumber,
+                                        status: expDateObj < new Date() ? 'EXPIRED' : 'ACTIVE',
+                                        lastVerifiedAt: new Date()
+                                    }
+                                });
+                            } else {
+                                // Create new
+                                existingDoc = await tx.customerDocument.create({
+                                    data: {
+                                        companyId: session.user.companyId,
+                                        partnerId: finalPartnerId,
+                                        beneficiaryId: finalBeneficiaryId,
+                                        documentTypeId,
+                                        documentNumber,
+                                        expiryDate: expDateObj,
+                                        status: expDateObj < new Date() ? 'EXPIRED' : 'ACTIVE',
+                                        lastVerifiedAt: new Date()
+                                    }
+                                });
+                            }
+
+                            // Schedule Notification
+                            // Calculate scheduled date: Expiry - Reminder Days
+                            const days = reminderDays || workType.defaultReminderDays || 30;
+                            const scheduleDate = new Date(expDateObj);
+                            scheduleDate.setDate(scheduleDate.getDate() - days);
+
+                            // Delete pending notifications for this doc to avoid duplicates
+                            await tx.documentNotificationSchedule.deleteMany({
+                                where: {
+                                    documentId: existingDoc.id,
+                                    status: 'PENDING'
+                                }
+                            });
+
+                            // Create new schedule if date is in future
+                            if (scheduleDate > new Date()) {
+                                await tx.documentNotificationSchedule.create({
+                                    data: {
+                                        documentId: existingDoc.id,
+                                        scheduledDate: scheduleDate,
+                                        status: 'PENDING',
+                                        channel: 'WHATSAPP' // Default
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
 
                 await tx.transaction.create({
                     data: {

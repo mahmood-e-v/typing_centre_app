@@ -15,6 +15,12 @@ interface InvoiceItem {
     tax: number;
     total: number;
     isGovtFeeExempt?: boolean;
+    documentData?: {
+        documentTypeId: string;
+        expiryDate: string;
+        documentNumber: string;
+        reminderDays: number;
+    };
 }
 
 interface InvoiceHeader {
@@ -59,6 +65,7 @@ export default function InvoiceForm() {
     const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
     const [partners, setPartners] = useState<any[]>([]);
     const [accounts, setAccounts] = useState<any[]>([]);
+    const [documentTypes, setDocumentTypes] = useState<any[]>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [refreshGrid, setRefreshGrid] = useState(0);
 
@@ -134,11 +141,12 @@ export default function InvoiceForm() {
         };
 
         // Execute in parallel but safely
-        const [svc, ben, ptr, acc, usr] = await Promise.all([
+        const [svc, ben, ptr, acc, dtypes, usr] = await Promise.all([
             safeFetch('/api/work-types', 'Services'),
             safeFetch('/api/beneficiaries', 'Beneficiaries'),
             safeFetch('/api/partners', 'Partners'),
             safeFetch('/api/accounts', 'Accounts'),
+            safeFetch('/api/document-types', 'Document Types'),
             safeSession()
         ]);
 
@@ -148,6 +156,7 @@ export default function InvoiceForm() {
         if (Array.isArray(ben)) setBeneficiaries(ben);
         if (Array.isArray(ptr)) setPartners(ptr);
         if (Array.isArray(acc)) setAccounts(acc);
+        if (Array.isArray(dtypes)) setDocumentTypes(dtypes);
 
         if (usr && usr.user) {
             setCurrentUser(usr.user);
@@ -191,7 +200,13 @@ export default function InvoiceForm() {
                 processedValue = parseFloat(value) || 0;
             }
 
-            const updatedItem = { ...item, [field]: processedValue };
+            const updatedItem = { ...item };
+
+            // 1. Generic Update (Skip special fields handled below if needed)
+            if (field !== 'documentData') {
+                // @ts-ignore
+                updatedItem[field] = processedValue;
+            }
 
             // Logic for Checkbox
             if (field === 'isGovtFeeExempt') {
@@ -205,7 +220,27 @@ export default function InvoiceForm() {
                 if (svc) {
                     updatedItem.govFee = updatedItem.isGovtFeeExempt ? 0 : (Number(svc.presetGovFee) || 0);
                     updatedItem.typingCharge = Number(svc.presetTypingCharge) || 0;
+
+                    // Trigger Expiry Tracking if Service allows
+                    if (svc.tracksExpiry) {
+                        updatedItem.documentData = {
+                            documentTypeId: svc.defaultDocumentTypeId || '',
+                            expiryDate: '',
+                            documentNumber: '',
+                            reminderDays: svc.defaultReminderDays || 30
+                        };
+                    } else {
+                        delete updatedItem.documentData;
+                    }
                 }
+            }
+
+            // Document Data Update Logic - Merge with existing
+            if (field === 'documentData' && typeof value === 'object') {
+                updatedItem.documentData = {
+                    ...(item.documentData || {}), // Use original item's data
+                    ...value
+                } as any;
             }
 
             // Enforce Exemption if Checked
@@ -778,6 +813,21 @@ export default function InvoiceForm() {
                             />
                         </div>
 
+                        {/* EMAIL FIELD */}
+                        <div className="md:col-span-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                Email Address <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                            </label>
+                            <input
+                                type="email"
+                                placeholder="customer@example.com"
+                                className="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-rose-200"
+                                value={header.customerEmail}
+                                onChange={e => setHeader({ ...header, customerEmail: e.target.value })}
+                                disabled={isLocked}
+                            />
+                        </div>
+
                         <div className="md:col-span-1 flex flex-col justify-center gap-2">
                             {selectedPartner && (
                                 <>
@@ -864,6 +914,36 @@ export default function InvoiceForm() {
                                             onChange={e => updateItem(item.id, 'service', e.target.value)}
                                             disabled={isLocked}
                                         />
+                                        {/* EXPIRY SECTION */}
+                                        {item.documentData && (
+                                            <div className="mt-2 text-xs flex flex-wrap items-center gap-2 animate-in slide-in-from-top-2 p-2 bg-blue-50/50 rounded border border-blue-100">
+                                                <span className="font-bold text-blue-600 uppercase tracking-wider text-[10px] whitespace-nowrap">Document Expiry</span>
+                                                <select
+                                                    className="border rounded p-1 bg-white outline-none focus:ring-2 focus:ring-blue-100 h-8"
+                                                    value={item.documentData.documentTypeId}
+                                                    onChange={e => updateItem(item.id, 'documentData', { documentTypeId: e.target.value })}
+                                                    disabled={isLocked}
+                                                >
+                                                    <option value="">Select Type</option>
+                                                    {documentTypes.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                                </select>
+                                                <input
+                                                    type="date"
+                                                    className="border rounded p-1 outline-none focus:ring-2 focus:ring-blue-100 h-8"
+                                                    value={item.documentData.expiryDate ? new Date(item.documentData.expiryDate).toISOString().split('T')[0] : ''}
+                                                    onChange={e => updateItem(item.id, 'documentData', { expiryDate: e.target.value })}
+                                                    disabled={isLocked}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Doc No. (Opt)"
+                                                    className="border rounded p-1 w-32 outline-none focus:ring-2 focus:ring-blue-100 h-8"
+                                                    value={item.documentData.documentNumber || ''}
+                                                    onChange={e => updateItem(item.id, 'documentData', { documentNumber: e.target.value })}
+                                                    disabled={isLocked}
+                                                />
+                                            </div>
+                                        )}
                                     </td>
 
                                     <td className="p-3">

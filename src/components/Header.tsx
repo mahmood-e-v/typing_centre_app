@@ -159,7 +159,7 @@ export default function Header() {
                 </div>
                 <div className="flex items-center gap-x-4">
                     <button
-                        onClick={() => router.push('/notifications')}
+                        onClick={() => window.location.href = '/notifications'}
                         className="p-2 hover:bg-slate-100 rounded-full transition relative group"
                         suppressHydrationWarning
                     >

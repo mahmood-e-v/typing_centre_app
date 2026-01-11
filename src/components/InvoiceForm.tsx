@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, Printer, UserPlus, Search, Edit2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import TransactionGrid from './TransactionGrid';
 
@@ -389,18 +390,18 @@ export default function InvoiceForm() {
     const handleDeleteBeneficiary = async (id: string, name: string) => {
         const session = await (await fetch('/api/session')).json();
         if (session?.user?.role !== 'ADMIN') {
-            alert("Only admins can delete customers.");
+            toast.error("Only admins can delete customers.");
             return;
         }
         const input = prompt(`DELETE BENEFICIARY: ${name}\n\nType "DELETE ${name}" to confirm.`);
         if (input === `DELETE ${name}`) {
             const res = await fetch(`/api/beneficiaries?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
-                alert("Deleted successfully");
+                toast.success("Deleted successfully");
                 fetchData();
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to delete");
+                toast.error(err.error || "Failed to delete");
             }
         }
     };
@@ -421,30 +422,30 @@ export default function InvoiceForm() {
         });
 
         if (res.ok) {
-            alert("Updated Successfully");
+            toast.success("Updated Successfully");
             fetchData();
             setShowEditModal(false);
             setEditingItem(null);
         } else {
-            alert("Failed to update");
+            toast.error("Failed to update");
         }
     };
 
     const handleDeletePartner = async (id: string, name: string) => {
         const session = await (await fetch('/api/session')).json();
         if (session?.user?.role !== 'ADMIN') {
-            alert("Only admins can delete companies.");
+            toast.error("Only admins can delete companies.");
             return;
         }
         const input = prompt(`DELETE COMPANY: ${name}\n\nType "DELETE ${name}" to confirm.`);
         if (input === `DELETE ${name}`) {
             const res = await fetch(`/api/partners?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
-                alert("Deleted successfully");
+                toast.success("Deleted successfully");
                 fetchData();
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to delete");
+                toast.error(err.error || "Failed to delete");
             }
         }
     };
@@ -454,7 +455,7 @@ export default function InvoiceForm() {
         if (confirmCode === 'CONFIRM CLEAR ALL') {
             const res = await fetch('/api/partners?bulk=true', { method: 'DELETE' });
             if (res.ok) {
-                alert("Data cleared");
+                toast.success("Data cleared");
                 fetchData();
             }
         }
@@ -467,7 +468,7 @@ export default function InvoiceForm() {
             if (res.ok) {
                 const inv = await res.json();
                 if (!inv) {
-                    alert("Invoice not found");
+                    toast.error("Invoice not found");
                     return;
                 }
 
@@ -524,11 +525,11 @@ export default function InvoiceForm() {
 
                 setIsLocked(true);
             } else {
-                alert("Invoice Not Found in Records");
+                toast.error("Invoice Not Found in Records");
             }
         } catch (e) {
             console.error(e);
-            alert("Failed to load invoice");
+            toast.error("Failed to load invoice");
         }
     };
 
@@ -561,7 +562,7 @@ export default function InvoiceForm() {
         }
 
         if (errors.length > 0) {
-            alert("CANNOT SAVE - Missing Information:\n\n• " + errors.join("\n• "));
+            toast.error("CANNOT SAVE - Missing Information", { description: errors.join("\n• ") });
             return false;
         }
 
@@ -599,19 +600,19 @@ export default function InvoiceForm() {
             if (res.ok) {
                 const saved = await res.json();
                 // ... same success logic ...
-                alert(`Invoice ${saved.invoiceNo} Saved Successfully!`);
+                toast.success(`Invoice ${saved.invoiceNo} Saved Successfully!`);
                 setIsLocked(true);
                 setHeader(prev => ({ ...prev, invoiceNo: saved.invoiceNo }));
                 setRefreshGrid(prev => prev + 1);
                 return true;
             } else {
                 const err = await res.json();
-                alert("Error: " + (err.error || "Failed to save"));
+                toast.error("Error: " + (err.error || "Failed to save"));
                 return false;
             }
         } catch (e) {
             console.error(e);
-            alert("Connection Error");
+            toast.error("Connection Error");
             return false;
         } finally {
             setSaving(false);
@@ -1196,7 +1197,7 @@ export default function InvoiceForm() {
                                             if (code === 'UNLOCK') {
                                                 setIsLocked(false);
                                             } else {
-                                                alert("Incorrect code. Access Denied.");
+                                                toast.error("Incorrect code. Access Denied.");
                                             }
                                         }
                                     }}

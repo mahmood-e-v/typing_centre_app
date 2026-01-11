@@ -296,6 +296,27 @@ export default function SettingsPage() {
         }
     };
 
+    const handleDeleteService = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this service?")) return;
+
+        try {
+            const res = await fetch(`/api/work-types/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setServices(services.filter(s => s.id !== id));
+                alert("Service deleted successfully");
+            } else {
+                const data = await res.json();
+                alert(data.error || "Failed to delete service");
+            }
+        } catch (error) {
+            console.error("Error deleting service:", error);
+            alert("Error deleting service");
+        }
+    };
+
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -694,7 +715,10 @@ export default function SettingsPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <button className="text-red-500 hover:text-red-700">
+                                            <button
+                                                className="text-red-500 hover:text-red-700"
+                                                onClick={() => handleDeleteService(service.id)}
+                                            >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </td>
